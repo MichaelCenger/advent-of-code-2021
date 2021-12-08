@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace _08_1
 {
@@ -9,19 +10,25 @@ namespace _08_1
 		static void Main(string[] args)
 		{
 			var input = ReadInput();
+			int sum = 0;
+
+			foreach(var line in input)
+			{
+				string output = line.Split("|")[1];
+				foreach(var o in output.Split(" "))
+				{
+					if((o.Length == 2) || (o.Length == 3) || (o.Length == 4) || (o.Length == 7))
+					{
+						sum++;
+					}
+				}
+			}
+			Console.WriteLine(sum);
 		}
 
-		private static List<int> ReadInput()
+		private static List<string> ReadInput()
 		{
-			List<int> input = new List<int>();
-			string[] lines = File.ReadAllLines(@"input.txt");
-
-			foreach (string line in lines)
-			{
-				input.Add(Convert.ToInt32(line));
-			}
-
-			return input;
+			return File.ReadAllLines(@"input.txt").ToList();
 		}
 	}
 }
