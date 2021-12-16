@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace _17_1
 {
@@ -9,19 +10,27 @@ namespace _17_1
 		static void Main(string[] args)
 		{
 			var input = ReadInput();
-		}
-
-		private static List<int> ReadInput()
-		{
-			List<int> input = new List<int>();
-			string[] lines = File.ReadAllLines(@"input.txt");
-
-			foreach (string line in lines)
+			long result = 0;
+			foreach (var line in input)
 			{
-				input.Add(Convert.ToInt32(line));
+
 			}
 
-			return input;
+			Console.WriteLine(result);
+		}
+
+		private static List<string> ReadInput()
+		{
+			return File.ReadAllLines(@"input.txt").ToList();
+			//List<int> input = new List<int>();
+			//string[] lines = File.ReadAllLines(@"input.txt");
+
+			//foreach (string line in lines)
+			//{
+			//	input.Add(Convert.ToInt32(line));
+			//}
+
+			//return input;
 		}
 	}
 }
