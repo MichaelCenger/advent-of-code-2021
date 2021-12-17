@@ -1,27 +1,77 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace _17_2
 {
 	class Program
 	{
+		static int maxY = Int32.MinValue;
+		static int inTarget = 0;
+
 		static void Main(string[] args)
 		{
 			var input = ReadInput();
+			long result = 0;
+			for (int velX = -500; velX < 500; velX++)
+			{
+				for (int velY = -500; velY < 500; velY++)
+				{
+					Launch(velX, velY);
+				}
+			}
+			//Console.WriteLine(maxY);
+			Console.WriteLine(inTarget);
 		}
 
-		private static List<int> ReadInput()
+		public static void Launch(int velX, int velY)
 		{
-			List<int> input = new List<int>();
-			string[] lines = File.ReadAllLines(@"input.txt");
+			int x = 0;
+			int y = 0;
 
-			foreach (string line in lines)
+			int myMaxY = Int32.MinValue;
+			for (int i = 0; i < 1000; i++)
 			{
-				input.Add(Convert.ToInt32(line));
+				x += velX;
+				y += velY;
+				velY -= 1;
+				if (velX > 0)
+				{
+					velX -= 1;
+				}
+				else if (velX < 0)
+				{
+					velX += 1;
+				}
+				if (y > myMaxY)
+				{
+					myMaxY = y;
+				}
+				if (x >= 201 && x <= 230 && y >= -99 && y <= -65)
+				{
+					inTarget++;
+					if (myMaxY > maxY)
+					{
+						maxY = myMaxY;
+					}
+					break;
+				}
 			}
+		}
 
-			return input;
+		private static List<string> ReadInput()
+		{
+			return File.ReadAllLines(@"input.txt").ToList();
+			//List<int> input = new List<int>();
+			//string[] lines = File.ReadAllLines(@"input.txt");
+
+			//foreach (string line in lines)
+			//{
+			//	input.Add(Convert.ToInt32(line));
+			//}
+
+			//return input;
 		}
 	}
 }
