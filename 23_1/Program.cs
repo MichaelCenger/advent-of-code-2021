@@ -123,7 +123,7 @@ namespace _23_1
 						}
 						return true;
 					}
-					if (current.x + 1 < state.GetLength(1))
+					if ((current.x + 1) < state.GetLength(1))
 					{
 						(int y, int x) neighbourPos = (current.y, current.x + 1);
 						if (state[neighbourPos.y, neighbourPos.x] == '.' && !visited.Contains(neighbourPos))
@@ -132,7 +132,7 @@ namespace _23_1
 							path.Add(current);
 						}
 					}
-					if (current.x - 1 >= 0)
+					if ((current.x - 1) >= 0)
 					{
 						(int y, int x) neighbourPos = (current.y, current.x - 1);
 						if (state[neighbourPos.y, neighbourPos.x] == '.' && !visited.Contains(neighbourPos))
@@ -141,7 +141,7 @@ namespace _23_1
 							path.Add(current);
 						}
 					}
-					if (current.y - 1 >= 0)
+					if ((current.y - 1) >= 0)
 					{
 						(int y, int x) neighbourPos = (current.y - 1, current.x);
 						if (state[neighbourPos.y, neighbourPos.x] == '.' && !visited.Contains(neighbourPos))
@@ -150,7 +150,7 @@ namespace _23_1
 							path.Add(current);
 						}
 					}
-					if (current.y + 1 < state.GetLength(0))
+					if ((current.y + 1) < state.GetLength(0))
 					{
 						(int y, int x) neighbourPos = (current.y + 1, current.x);
 						if (state[neighbourPos.y, neighbourPos.x] == '.' && !visited.Contains(neighbourPos))
@@ -201,6 +201,63 @@ namespace _23_1
 
 		static void Move(int totalCost, string path)
 		{
+			Stack<char[,]> states = new Stack<char[,]>();
+			HashSet<char[,]> visited = new HashSet<char[,]>();
+			states.Push(state);
+			while (states.Count != 0)
+			{
+				var current = states.Pop();
+				if (visited.Contains(current))
+				{
+					continue;
+				}
+				visited.Add(current);
+				foreach (var a in Amphipods)
+				{
+					if (a.Position.x == a.TargetColumn)
+					{
+						bool isInFinalPosition = true;
+						for (int y = 0; y < state.GetLength(0); y++)
+						{
+							if (state[y, a.Position.x] != '.' && state[y, a.Position.x] != '#' && state[y, a.Position.x] != a.Type)
+							{
+								isInFinalPosition = false;
+								break;
+							}
+						}
+						if (isInFinalPosition)
+						{
+							continue;
+						}
+					}
+
+
+					foreach (var possibleMove in a.GetPossibleMoves())
+					{
+						char[,] stateCopy = new char[5, 13];
+						for (int y = 0; y < state.GetLength(0); y++)
+						{
+							for (int x = 0; x < state.GetLength(1); x++)
+							{
+								stateCopy[y, x] = state[y, x];
+							}
+						}
+
+						stateCopy[a.Position.y, a.Position.x] = '.';
+						a.Position = (possibleMove.y, possibleMove.x);
+						state[a.Position.y, a.Position.x] = a.Type;
+
+						if (!visited.Contains(stateCopy))
+						{
+							states.Push(stateCopy);
+						}
+
+					}
+				}
+			}
+
+
+
 			//path += GetBoard();
 			if (IsDone())
 			{
@@ -212,43 +269,7 @@ namespace _23_1
 					Console.WriteLine(path);
 				}
 			}
-			foreach (var a in Amphipods)
-			{
-				if (a.Position.x == a.TargetColumn)
-				{
-					bool isInFinalPosition = true;
-					for (int y = 0; y < state.GetLength(0); y++)
-					{
-						if (state[y, a.Position.x] != '.' && state[y, a.Position.x] != '#' && state[y, a.Position.x] != a.Type)
-						{
-							isInFinalPosition = false;
-							break;
-						}
-					}
-					if (isInFinalPosition)
-					{
-						continue;
-					}
-				}
 
-
-				foreach (var possibleMove in a.GetPossibleMoves())
-				{
-					(int y, int x) posBeforeMove = a.Position;
-					//Console.WriteLine(a.Type + "Moves From " + posBeforeMove + " To " + possibleMove);
-					//path += "\nCost Before:" + totalCost + "\n";
-					//path += "\n" + a.Type + "Moves From " + posBeforeMove + " To " + (possibleMove.y, possibleMove.x) + "\n";
-					a.MoveTo((possibleMove.y, possibleMove.x), false);
-
-					//path += GetBoard();
-					//path += "\nCost After:" + (totalCost + possibleMove.cost) + "\n";
-					Move(totalCost + possibleMove.cost, path);
-					//path += "\n" + a.Type + "Backtracks From " + a.Position + " To " + posBeforeMove + "\n";
-					//Console.WriteLine(a.Type + "Backtracks From " + a.Position + " To " + posBeforeMove);
-					a.MoveTo(posBeforeMove, true);
-					//path += GetBoard();
-				}
-			}
 		}
 
 		static bool IsDone()
