@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -7,12 +6,12 @@ namespace _24_1
 {
 	class Program
 	{
-
+		static List<int> A = new List<int> { 10, 12, 10, 12, 11, -16, 10, -11, -13, 13, -8, -1, -4, -14 };
+		static List<int> B = new List<int> { 12, 7, 8, 8, 15, 12, 8, 13, 3, 13, 3, 9, 4, 13 };
+		static List<int> C = new List<int> { 1, 1, 1, 1, 1, 26, 1, 26, 26, 1, 26, 26, 26, 26 };
 
 		static List<string> instructionBlock = new List<string>();
-		static long largestNumber = 0;
-		static long smallestNumber = long.MaxValue;
-		static Dictionary<(long target, int block), (long z, long w)> mem = new Dictionary<(long target, int block), (long z, long w)>();
+		static Dictionary<(long target, int block), List<(long z, long w)>> mem = new Dictionary<(long target, int block), List<(long z, long w)>>();
 		static void Main(string[] args)
 		{
 			var instructions = ReadInput();
@@ -31,130 +30,74 @@ namespace _24_1
 			}
 			instructionBlock.Add(block.Substring(0, block.Length - 1));
 			Solve(0, 13, new List<long>());
-			Console.WriteLine(largestNumber);
-			Console.WriteLine(smallestNumber);
+
 		}
 
-		private static void Solve(long target, int digit, List<long> number)
+		private static void Solve(long target, int block, List<long> number)
 		{
-			if (digit < 0)
+			if (block < 0)
 			{
 				string num = "";
 				for (int i = number.Count - 1; i >= 0; i--)
 				{
 					num += number[i];
 				}
-				Console.WriteLine(num);
-				largestNumber = Math.Max(largestNumber, Convert.ToInt64(num));
-				smallestNumber = Math.Min(smallestNumber, Convert.ToInt64(num));
+
+				using (StreamWriter w = File.AppendText("result.txt"))
+				{
+					w.WriteLine(num);
+				}
 				return;
 			}
-			Dictionary<char, long> register = new Dictionary<char, long>();
-
-			for (int z = 10; z < 1000000; z++)
+			if (mem.ContainsKey((target, block)))
+			{
+				foreach (var sol in mem[(target, block)])
+				{
+					var newList = new List<long>(number);
+					newList.Add(sol.w);
+					Solve(sol.z, block - 1, newList);
+				}
+				return;
+			}
+			List<(long z, long w)> solutions = new List<(long z, long w)>();
+			long maxZ = (target + 1) * C[block];
+			if(block == 0)
+			{
+				maxZ = 1;
+			}
+			for (long z = 0; z < maxZ; z++)
 			{
 				for (int w = 9; w >= 1; w--)
 				{
-					if (mem.ContainsKey((target, digit)))
+					long newZ = CalculateBlock(w, z, block);
+					if (newZ == target)
 					{
-						var sol = mem[(target, digit)];
-						var newList = new List<long>(number);
-						newList.Add(sol.w);
-						Solve(sol.z, digit - 1, newList);
-						return;
-					}
-					register['x'] = 0;
-					register['y'] = 0;
-					register['z'] = z;
-					register['w'] = w;
-					foreach (var line in instructionBlock[digit].Split(","))
-					{
-						string[] instruction = line.Split(" ");
-						string op = instruction[0];
-						char location = instruction[1][0];
-						switch (op)
-						{
-							case "add":
-								string bInstruction = instruction[2];
-								long b = 0;
-								if (long.TryParse(bInstruction, out b))
-								{
-
-								}
-								else
-								{
-									b = register[bInstruction[0]];
-								}
-								register[location] += b;
-								break;
-							case "mul":
-								bInstruction = instruction[2];
-								b = 0;
-								if (long.TryParse(bInstruction, out b))
-								{
-
-								}
-								else
-								{
-									b = register[bInstruction[0]];
-								}
-								register[location] *= b;
-								break;
-							case "div":
-								bInstruction = instruction[2];
-								b = 0;
-								if (long.TryParse(bInstruction, out b))
-								{
-
-								}
-								else
-								{
-									b = register[bInstruction[0]];
-								}
-								register[location] /= b;
-								break;
-							case "mod":
-								bInstruction = instruction[2];
-								b = 0;
-								if (long.TryParse(bInstruction, out b))
-								{
-
-								}
-								else
-								{
-									b = register[bInstruction[0]];
-								}
-								register[location] = register[location] % b;
-								break;
-							case "eql":
-								bInstruction = instruction[2];
-								b = 0;
-								if (long.TryParse(bInstruction, out b))
-								{
-
-								}
-								else
-								{
-									b = register[bInstruction[0]];
-								}
-								register[location] = Convert.ToInt64(register[location] == b);
-								break;
-						}
-					}
-
-					if (register['z'] == target)
-					{
-						var newList = new List<long>(number);
-						newList.Add(w);
-
-						if (!mem.ContainsKey((target, digit)))
-						{
-							mem.Add((target, digit), (register['z'], w));
-						}
-						Solve(register['z'], digit - 1, newList);
+						solutions.Add((z, w));
 					}
 				}
 			}
+			if (!mem.ContainsKey((target, block)))
+			{
+				mem.Add((target, block), new List<(long z, long w)>(solutions));
+			}
+
+			foreach (var sol in solutions)
+			{
+				var newList = new List<long>(number);
+				newList.Add(sol.w);
+				Solve(sol.z, block - 1, newList);
+			}
+		}
+
+		private static long CalculateBlock(int w, long z, int block)
+		{
+			long newZ = z / C[block];
+
+			if ((z % 26 + A[block]) == w)
+			{
+				return newZ;
+			}
+			return 26 * newZ + w + B[block];
 		}
 
 		private static List<string> ReadInput()
