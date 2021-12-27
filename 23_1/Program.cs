@@ -7,29 +7,52 @@ namespace _23_1
 {
 	class Program
 	{
+		class Node
+		{
+			public Node Previous = null;
+			public List<Edge> Edges = new List<Edge>();
+			public int Distance = Int32.MaxValue;
+			public char[,] Board;
+		}
+
+		class Edge
+		{
+			public int Cost = 0;
+			public Node Other = null;
+
+			public Edge(int cost, Node other)
+			{
+				Cost = cost;
+				Other = other;
+			}
+		}
+
 		class Amphipod
 		{
 			public int TargetColumn;
 			public char Type;
 			public (int y, int x) Position;
 			public int StepsTaken = 0;
+			public int Moves = 0;
 
-			public Amphipod(int targetColumn, char type, (int y, int x) position)
+			public Amphipod(int targetColumn, char type, (int y, int x) position, int moves)
 			{
 				TargetColumn = targetColumn;
 				Type = type;
 				Position = position;
+				Moves = moves;
 			}
 
-			public void MoveTo((int y, int x) newPos, bool backtrack)
+			public void MoveTo((int y, int x) newPos, char[,] state)
 			{
 				int steps = Math.Abs(newPos.x - Position.x) + Math.Abs(newPos.y - Position.y);
 				state[Position.y, Position.x] = '.';
 				Position = newPos;
 				state[Position.y, Position.x] = Type;
+				Moves++;
 			}
 
-			public List<(int y, int x, int cost)> GetPossibleMoves()
+			public List<(int y, int x, int cost)> GetPossibleMoves(char[,] state)
 			{
 				List<(int y, int x, int cost)> moves = new List<(int y, int x, int cost)>();
 				for (int y = 0; y < state.GetLength(0); y++)
@@ -73,13 +96,13 @@ namespace _23_1
 									break;
 								}
 							}
-							if (!allowed || (count < 1 && y == 2))
+							if (!allowed || (count ==0 && y == 2))
 							{
 								continue;
 							}
 						}
 						int cost;
-						if (HasPath(Position, (y, x), out cost))
+						if (HasPath(Position, (y, x), out cost, state))
 						{
 							moves.Add((y, x, cost));
 						}
@@ -88,48 +111,24 @@ namespace _23_1
 				return moves;
 			}
 
-			public bool HasPath((int y, int x) start, (int y, int x) end, out int cost)
+			public bool HasPath((int y, int x) start, (int y, int x) end, out int cost, char[,] state)
 			{
+				Dictionary<(int y, int x), int> unexplored = new Dictionary<(int y, int x), int>();
+
 				Stack<(int y, int x)> positions = new Stack<(int y, int x)>();
 				HashSet<(int y, int x)> visited = new HashSet<(int y, int x)>();
-				HashSet<(int y, int x)> path = new HashSet<(int y, int x)>();
 				positions.Push(start);
 				while (positions.Count != 0)
 				{
 					var current = positions.Pop();
-					if (visited.Contains(current))
-					{
-						continue;
-					}
+					unexplored.Add(current, Int32.MaxValue);
 					visited.Add(current);
-					if (current == end)
-					{
-						cost = path.Count;
-						if (Type == 'A')
-						{
-							cost *= 1;
-						}
-						if (Type == 'B')
-						{
-							cost *= 10;
-						}
-						if (Type == 'C')
-						{
-							cost *= 100;
-						}
-						if (Type == 'D')
-						{
-							cost *= 1000;
-						}
-						return true;
-					}
 					if ((current.x + 1) < state.GetLength(1))
 					{
 						(int y, int x) neighbourPos = (current.y, current.x + 1);
 						if (state[neighbourPos.y, neighbourPos.x] == '.' && !visited.Contains(neighbourPos))
 						{
 							positions.Push(neighbourPos);
-							path.Add(current);
 						}
 					}
 					if ((current.x - 1) >= 0)
@@ -138,7 +137,6 @@ namespace _23_1
 						if (state[neighbourPos.y, neighbourPos.x] == '.' && !visited.Contains(neighbourPos))
 						{
 							positions.Push(neighbourPos);
-							path.Add(current);
 						}
 					}
 					if ((current.y - 1) >= 0)
@@ -147,7 +145,6 @@ namespace _23_1
 						if (state[neighbourPos.y, neighbourPos.x] == '.' && !visited.Contains(neighbourPos))
 						{
 							positions.Push(neighbourPos);
-							path.Add(current);
 						}
 					}
 					if ((current.y + 1) < state.GetLength(0))
@@ -156,20 +153,121 @@ namespace _23_1
 						if (state[neighbourPos.y, neighbourPos.x] == '.' && !visited.Contains(neighbourPos))
 						{
 							positions.Push(neighbourPos);
-							path.Add(current);
 						}
 					}
 				}
+
+				unexplored[start] = 0;
+				int minCost = Int32.MaxValue;
+				bool foundPath = false;
+				while (unexplored.Count != 0)
+				{
+					int minDistance = Int32.MaxValue;
+					(int y, int x) currentPos = (0, 0);
+					foreach (var node in unexplored)
+					{
+						if (node.Value < minDistance)
+						{
+							currentPos = node.Key;
+							minDistance = node.Value;
+						}
+					}
+					int myVal = unexplored[currentPos];
+					unexplored.Remove(currentPos);
+					if (unexplored.ContainsKey((currentPos.y + 1, currentPos.x)))
+					{
+						int newDistance = myVal + 1;
+						if (newDistance < unexplored[(currentPos.y + 1, currentPos.x)])
+						{
+							unexplored[(currentPos.y + 1, currentPos.x)] = newDistance;
+							if ((currentPos.y + 1, currentPos.x) == end)
+							{
+								foundPath = true;
+								if (newDistance < minCost)
+								{
+									minCost = newDistance;
+								}
+							}
+						}
+					}
+					if (unexplored.ContainsKey((currentPos.y - 1, currentPos.x)))
+					{
+						int newDistance = myVal + 1;
+						if (newDistance < unexplored[(currentPos.y - 1, currentPos.x)])
+						{
+							unexplored[(currentPos.y - 1, currentPos.x)] = newDistance;
+							if ((currentPos.y - 1, currentPos.x) == end)
+							{
+								foundPath = true;
+								if (newDistance < minCost)
+								{
+									minCost = newDistance;
+								}
+							}
+						}
+					}
+					if (unexplored.ContainsKey((currentPos.y, currentPos.x + 1)))
+					{
+						int newDistance = myVal + 1;
+						if (newDistance < unexplored[(currentPos.y, currentPos.x + 1)])
+						{
+							unexplored[(currentPos.y, currentPos.x + 1)] = newDistance;
+							if ((currentPos.y, currentPos.x + 1) == end)
+							{
+								foundPath = true;
+								if (newDistance < minCost)
+								{
+									minCost = newDistance;
+								}
+							}
+						}
+					}
+					if (unexplored.ContainsKey((currentPos.y, currentPos.x - 1)))
+					{
+						int newDistance = myVal + 1;
+						if (newDistance < unexplored[(currentPos.y, currentPos.x - 1)])
+						{
+							unexplored[(currentPos.y, currentPos.x - 1)] = newDistance;
+							if ((currentPos.y, currentPos.x - 1) == end)
+							{
+								foundPath = true;
+								if (newDistance < minCost)
+								{
+									minCost = newDistance;
+								}
+							}
+						}
+					}
+				}
+
 				cost = 0;
-				return false;
+				switch (Type)
+				{
+					case 'A':
+						cost = minCost;
+						break;
+					case 'B':
+						cost = minCost * 10;
+						break;
+					case 'C':
+						cost = minCost * 100;
+						break;
+					case 'D':
+						cost = minCost * 1000;
+						break;
+				}
+				return foundPath;
+			}
+			public Amphipod CreateCopy()
+			{
+				return new Amphipod(TargetColumn, Type, Position, Moves);
 			}
 		}
-		static char[,] state = new char[5, 13];
-		static List<Amphipod> Amphipods = new List<Amphipod>();
-		static int lowestCost = Int32.MaxValue;
-		static HashSet<int> costs = new HashSet<int>();
+		static Node targetNode;
 		static void Main(string[] args)
 		{
+			char[,] state = new char[5, 13];
+			List<Amphipod> amphipods = new List<Amphipod>();
 			var input = ReadInput();
 			for (int y = 0; y < input.Count; y++)
 			{
@@ -178,104 +276,183 @@ namespace _23_1
 					state[y, x] = input[y][x];
 					if (input[y][x] == 'A')
 					{
-						Amphipods.Add(new Amphipod(3, 'A', (y, x)));
+						amphipods.Add(new Amphipod(3, 'A', (y, x), 0));
 					}
 					if (input[y][x] == 'B')
 					{
-						Amphipods.Add(new Amphipod(5, 'B', (y, x)));
+						amphipods.Add(new Amphipod(5, 'B', (y, x), 0));
 					}
 					if (input[y][x] == 'C')
 					{
-						Amphipods.Add(new Amphipod(7, 'C', (y, x)));
+						amphipods.Add(new Amphipod(7, 'C', (y, x), 0));
 					}
 					if (input[y][x] == 'D')
 					{
-						Amphipods.Add(new Amphipod(9, 'D', (y, x)));
+						amphipods.Add(new Amphipod(9, 'D', (y, x), 0));
 					}
 				}
 			}
 			int totalCost = 0;
-			Move(totalCost, GetBoard());
-			Console.WriteLine(lowestCost);
+			Node startNode = new Node();
+			startNode.Board = state;
+			Dictionary<string, Node> nodes = new Dictionary<string, Node>();
+			nodes.Add(GetBoard(state), startNode);
+			CreateGraph(state, amphipods, startNode, nodes);
+			FindLowestCost(startNode, targetNode, nodes);
 		}
 
-		static void Move(int totalCost, string path)
+		static void CreateGraph(char[,] state, List<Amphipod> amphipods, Node currentNode, Dictionary<string, Node> nodes)
 		{
-			Stack<char[,]> states = new Stack<char[,]>();
-			HashSet<char[,]> visited = new HashSet<char[,]>();
-			states.Push(state);
-			while (states.Count != 0)
+			if (IsDone(amphipods))
 			{
-				var current = states.Pop();
-				if (visited.Contains(current))
+				targetNode = currentNode;
+			}
+			foreach (var a in amphipods)
+			{
+				if ((a.Position.x == a.TargetColumn))
 				{
-					continue;
-				}
-				visited.Add(current);
-				foreach (var a in Amphipods)
-				{
-					if (a.Position.x == a.TargetColumn)
+					bool isInFinalPosition = true;
+					for (int checkY = 0; checkY < state.GetLength(0); checkY++)
 					{
-						bool isInFinalPosition = true;
-						for (int y = 0; y < state.GetLength(0); y++)
+						if (state[checkY, a.Position.x] != '.' && state[checkY, a.Position.x] != '#' && state[checkY, a.Position.x] != a.Type)
 						{
-							if (state[y, a.Position.x] != '.' && state[y, a.Position.x] != '#' && state[y, a.Position.x] != a.Type)
-							{
-								isInFinalPosition = false;
-								break;
-							}
-						}
-						if (isInFinalPosition)
-						{
-							continue;
+							isInFinalPosition = false;
+							break;
 						}
 					}
-
-
-					foreach (var possibleMove in a.GetPossibleMoves())
+					if (isInFinalPosition)
 					{
-						char[,] stateCopy = new char[5, 13];
-						for (int y = 0; y < state.GetLength(0); y++)
+						continue;
+					}
+				}
+
+				foreach (var possibleMove in a.GetPossibleMoves(state))
+				{
+					char[,] stateCopy = new char[5, 13];
+					for (int y = 0; y < state.GetLength(0); y++)
+					{
+						for (int x = 0; x < state.GetLength(1); x++)
 						{
-							for (int x = 0; x < state.GetLength(1); x++)
+							stateCopy[y, x] = state[y, x];
+						}
+					}
+					List<Amphipod> amphipodCopy = new List<Amphipod>();
+					foreach (var amph in amphipods)
+					{
+						Amphipod copy = amph.CreateCopy();
+						if (amph == a)
+						{
+							copy.MoveTo((possibleMove.y, possibleMove.x), stateCopy);
+						}
+						amphipodCopy.Add(copy);
+					}
+					if (nodes.ContainsKey(GetBoard(stateCopy)))
+					{
+						currentNode.Edges.Add(new Edge(possibleMove.cost, nodes[GetBoard(stateCopy)]));
+						continue;
+					}
+					Node newNode = new Node();
+					newNode.Board = stateCopy;
+					currentNode.Edges.Add(new Edge(possibleMove.cost, newNode));
+
+					nodes.Add(GetBoard(stateCopy), newNode);
+					CreateGraph(stateCopy, amphipodCopy, newNode, nodes);
+				}
+			}
+		}
+
+		static void FindLowestCost(Node startNode, Node targetNode, Dictionary<string, Node> nodes)
+		{
+			int lowestCost = int.MaxValue;
+			HashSet<Node> unexplored = new HashSet<Node>();
+			startNode.Distance = 0;
+			foreach (var node in nodes)
+			{
+				unexplored.Add(node.Value);
+			}
+			while (unexplored.Count != 0)
+			{
+				int minDistance = Int32.MaxValue;
+				Node currentNode = null;
+				foreach (var node in unexplored)
+				{
+					if (node.Distance < minDistance)
+					{
+						currentNode = node;
+						minDistance = node.Distance;
+					}
+				}
+				unexplored.Remove(currentNode);
+				foreach (var edge in currentNode.Edges)
+				{
+					if (unexplored.Contains(edge.Other))
+					{
+						int newDistance = currentNode.Distance + edge.Cost;
+						if (newDistance < edge.Other.Distance)
+						{
+							edge.Other.Distance = newDistance;
+							edge.Other.Previous = currentNode;
+							if (edge.Other == targetNode)
 							{
-								stateCopy[y, x] = state[y, x];
+								if (newDistance < lowestCost)
+								{
+									lowestCost = newDistance;
+								}
+								Console.WriteLine(newDistance);
+								Node printNode = targetNode;
+								while (printNode.Previous != null)
+								{
+									Console.WriteLine(GetBoard(printNode.Previous.Board));
+									printNode = printNode.Previous;
+								}
+
 							}
 						}
-
-						stateCopy[a.Position.y, a.Position.x] = '.';
-						a.Position = (possibleMove.y, possibleMove.x);
-						state[a.Position.y, a.Position.x] = a.Type;
-
-						if (!visited.Contains(stateCopy))
-						{
-							states.Push(stateCopy);
-						}
-
 					}
 				}
 			}
 
+			Console.WriteLine(lowestCost);
+			//Stack<(char[,] board, List<Amphipod> amphipods)> states = new Stack<(char[,], List<Amphipod>)>();
+			//HashSet<char[,]> visited = new HashSet<char[,]>();
+			//HashSet<(char[,] state, int cost)> path = new HashSet<(char[,] state, int cost)>();
+			//states.Push((startingState, startingAmphipods));
+			//int paths = 0;
+			//while (states.Count != 0)
+			//{
+			//	paths++;
+			//	var current = states.Pop();
+			//	if (visited.Contains(current.board))
+			//	{
+			//		continue;
+			//	}
+			//	visited.Add(current.board);
+			//	foreach (var a in current.amphipods)
+			//	{
+
+			//	}
+			//}
+			//Console.WriteLine(paths);
 
 
 			//path += GetBoard();
-			if (IsDone())
-			{
-				if (totalCost < lowestCost)
-				{
-					lowestCost = totalCost;
-					Console.WriteLine("=======================================");
-					Console.WriteLine("\n\n\n\n" + totalCost);
-					Console.WriteLine(path);
-				}
-			}
+			//if (IsDone())
+			//{
+			//	if (totalCost < lowestCost)
+			//	{
+			//		lowestCost = totalCost;
+			//		Console.WriteLine("=======================================");
+			//		Console.WriteLine("\n\n\n\n" + totalCost);
+			//		Console.WriteLine(path);
+			//	}
+			//}
 
 		}
 
-		static bool IsDone()
+		static bool IsDone(List<Amphipod> amphipods)
 		{
 			bool done = true;
-			foreach (var a in Amphipods)
+			foreach (var a in amphipods)
 			{
 				if (a.Position.x != a.TargetColumn)
 				{
@@ -286,32 +463,32 @@ namespace _23_1
 			return done;
 		}
 
-		static int GetTotalCost()
-		{
-			int sum = 0;
-			foreach (var a in Amphipods)
-			{
-				if (a.Type == 'A')
-				{
-					sum += a.StepsTaken;
-				}
-				if (a.Type == 'B')
-				{
-					sum += a.StepsTaken * 10;
-				}
-				if (a.Type == 'C')
-				{
-					sum += a.StepsTaken * 100;
-				}
-				if (a.Type == 'D')
-				{
-					sum += a.StepsTaken * 1000;
-				}
-			}
-			return sum;
-		}
+		//static int GetTotalCost()
+		//{
+		//	int sum = 0;
+		//	foreach (var a in Amphipods)
+		//	{
+		//		if (a.Type == 'A')
+		//		{
+		//			sum += a.StepsTaken;
+		//		}
+		//		if (a.Type == 'B')
+		//		{
+		//			sum += a.StepsTaken * 10;
+		//		}
+		//		if (a.Type == 'C')
+		//		{
+		//			sum += a.StepsTaken * 100;
+		//		}
+		//		if (a.Type == 'D')
+		//		{
+		//			sum += a.StepsTaken * 1000;
+		//		}
+		//	}
+		//	return sum;
+		//}
 
-		static string GetBoard()
+		static string GetBoard(char[,] state)
 		{
 			string result = "";
 			for (int y = 0; y < state.GetLength(0); y++)
